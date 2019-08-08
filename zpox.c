@@ -10,12 +10,17 @@
 #include "z80ex_dasm.h"
 #include "console.h"
 
-// An instance of an emulator UI
+struct open_files {
+    FILE* control;
+};
+
 struct zpox {
     uint8_t* memory;
     Z80EX_CONTEXT *cpu;
     uint16_t pc_before;
     uint16_t pc_after;
+    struct interface* console;
+    struct open_files* files;
 };
 
 // Z80EX-Callback for a CPU memory read
@@ -26,27 +31,30 @@ Z80EX_BYTE mem_read(Z80EX_CONTEXT* cpu, Z80EX_WORD addr, int m1_state, void* use
 }
 
 // Z80EX-Callback for a CPU memory write
-void mem_write(Z80EX_CONTEXT *cpu, Z80EX_WORD addr, Z80EX_BYTE value, void *user_data) {
-    //printf("memory write: address[%04x] data[%02x]\n", addr, value);
+void mem_write(Z80EX_CONTEXT* cpu, Z80EX_WORD address, Z80EX_BYTE data, void* user_data) {
+    printf("memory write: address[%04x] data[%02x]\n", address, data);
     struct zpox* z = user_data;
-    z->memory[(uint16_t)addr] = value;
+    z->memory[(uint16_t)address] = data;
     return;
 }
 
 // Z80EX-Callback for a CPU port read
-Z80EX_BYTE port_read(Z80EX_CONTEXT *cpu, Z80EX_WORD port, void *z80emu) {
-    return console_port_read((uint16_t)port);
+Z80EX_BYTE port_read(Z80EX_CONTEXT* cpu, Z80EX_WORD port, void* user_data) {
+    struct zpox* z = user_data;
+    return z->console->port_read(z->console->user_data, (uint16_t)port);
 }
 
 // Z80EX-Callback for a CPU port write
-void port_write(Z80EX_CONTEXT *cpu, Z80EX_WORD port, Z80EX_BYTE value, void *z80emu) {
-    console_port_write((uint16_t)port, (uint8_t)value);
+void port_write(Z80EX_CONTEXT *cpu, Z80EX_WORD port, Z80EX_BYTE value, void* user_data) {
+    struct zpox* z = user_data;
+    z->console->port_write(z->console->user_data, (uint16_t)port, (uint8_t)value);
 }
 
 // Z80EX-Callback for an interrupt read
-Z80EX_BYTE int_read(Z80EX_CONTEXT *cpu, void *z80emu) {
+Z80EX_BYTE int_read(Z80EX_CONTEXT* cpu, void* user_data) {
+    struct zpox* z = user_data;
     fprintf(stderr, "interrupt vector!\n");
-    return 0;
+    return z->console->interrupt_addr(z->console->user_data);
 }
 
 // Z80EX-Callback for DASM memory read
@@ -55,12 +63,11 @@ Z80EX_BYTE mem_read_dasm(Z80EX_WORD addr, void *user_data) {
     return z->memory[(uint16_t)addr];
 }
 
-// Load a ROM file from disk into 16k memory
-void load_binary_rom(struct zpox* z, char* rom_file) {
+void load_binary_rom(struct zpox* z, char* file) {
     unsigned long len;
     FILE* rom_fh;
 
-    rom_fh = fopen(rom_file, "rb");
+    rom_fh = fopen(file, "rb");
     if (rom_fh == NULL) {
         fprintf(stderr, "Could not open rom file\n");
         exit(1);
@@ -79,7 +86,28 @@ void load_binary_rom(struct zpox* z, char* rom_file) {
     fclose(rom_fh);
 }
 
-// initialize an instance of a z80 emulator
+void open_control_file(struct zpox* z, char* file) {
+    z->files->control = fopen("file", "r");
+    if (z->files->control == NULL) {
+        return;
+    }
+}
+
+uint8_t read_control_file(struct zpox* z) {
+    if (z->files->control == NULL) {
+        return 0;
+    }
+    char* line;
+    size_t len = 0;
+    ssize_t read = getline(&line, &len, z->files->control);
+    if (read <= 0) {
+        return 0;
+    }
+    int32_t num = 0;
+    sscanf(line, "%x", &num);
+    return num;
+}
+
 void init_zpox(struct zpox* z) {
     memset(z, 0, sizeof(struct zpox));
     z->memory = malloc(sizeof(uint8_t) * 0x10000);
@@ -99,36 +127,51 @@ void print_asm(struct zpox* z, uint16_t pc) {
 
 void main_program(struct zpox* z) {
     uint16_t pc;
+    uint32_t nr_ins = 0;
     z->cpu = z80ex_create(mem_read, z, mem_write, z, port_read, z, port_write, z, int_read, z);
     while (1) {
         pc = z80ex_get_reg(z->cpu, regPC);
         print_asm(z, pc);
         z80ex_step(z->cpu);
+        if (z->console->interrupt_ready(z->console->user_data)) {
+            z80ex_int(z->cpu);
+        }
+        nr_ins++;
+        if (nr_ins > 100) {
+            break;
+        }
     }
 }
 
 // Parse command args and set up the instance
 int main(int argc, char *argv[]) {
     int8_t c;
-	int option_index = 0;
+    int option_index = 0;
     struct zpox z;
+    struct open_files f;
 
-	static struct option long_options[] = {
+    static struct option long_options[] = {
         {"rom", optional_argument, 0, 'r'},
+        {"ctrl", optional_argument, 0, 'c'},
         {0, 0, 0, 0}
     };
 
     init_zpox(&z);
-    console_init();
+    z.files = &f;
+    z.console = get_interface();
+    z.console->init();
 
     while (1) {
-		c = getopt_long(argc, argv, "r:", long_options, &option_index);
-		if (c == -1) {
-			break;
-		}
+        c = getopt_long(argc, argv, "r:c:", long_options, &option_index);
+        if (c == -1) {
+            break;
+        }
         switch (c) {
             case 'r':
                 load_binary_rom(&z, optarg);
+                break;
+            case 'c':
+                open_control_file(&z, optarg);
                 break;
             default:
                 //print_help();
