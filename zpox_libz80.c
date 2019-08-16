@@ -6,7 +6,8 @@
 #include <getopt.h>
 //#include <signal.h>
 //#include <locale.h>
-#include "z80ex.h"
+#include <stdint.h>
+#include "z80.h"
 #include "z80ex_dasm.h"
 
 struct open_files {
@@ -15,11 +16,13 @@ struct open_files {
 
 struct zpox {
     uint8_t* memory;
-    Z80EX_CONTEXT *cpu;
+    Z80Context *cpu;
     uint16_t pc_before;
     uint16_t pc_after;
     struct open_files* files;
 };
+
+struct zpox z;
 
 void load_binary_rom(struct zpox* z, char* file) {
     unsigned long len;
@@ -67,52 +70,37 @@ uint8_t read_control_file(struct zpox* z) {
     return (uint8_t)num;
 }
 
-// Z80EX-Callback for a CPU memory read
-Z80EX_BYTE mem_read(Z80EX_CONTEXT* cpu, Z80EX_WORD addr, int m1_state, void* user_data) {
-    struct zpox* z;
-    z = user_data;
-    return z->memory[(uint16_t)addr];
+byte mem_read(int param, ushort addr) {
+    return z.memory[(uint16_t)addr];
 }
 
-// Z80EX-Callback for a CPU memory write
-void mem_write(Z80EX_CONTEXT* cpu, Z80EX_WORD address, Z80EX_BYTE data, void* user_data) {
+void mem_write(int param, ushort address, byte data) {
     fprintf(stderr, "  memory write: address[%04x] data[%02x]\n", address, data);
-    struct zpox* z = user_data;
-    z->memory[(uint16_t)address] = data;
+    z.memory[(uint16_t)address] = data;
     return;
 }
 
-// Z80EX-Callback for a CPU port read
-Z80EX_BYTE port_read(Z80EX_CONTEXT* cpu, Z80EX_WORD port, void* user_data) {
-    struct zpox* z = user_data;
+byte port_read(int param, ushort port) {
     if (port == 0x80) {
-        return read_control_file(z);
+        return read_control_file(&z);
     }
     if (port == 0x82) {
-        return read_control_file(z);
+        return read_control_file(&z);
     }
     return 0;
 }
 
-// Z80EX-Callback for a CPU port write
-void port_write(Z80EX_CONTEXT *cpu, Z80EX_WORD port, Z80EX_BYTE value, void* user_data) {
+void port_write(int param, ushort port, byte data) {
     if (port == 0x81) {
-        fprintf(stderr, "  serial write A [%02x] \"%c\"\n", value, value);
+        fprintf(stderr, "  serial write A [%02x] \"%c\"\n", data, data);
         return;
     }
     if (port == 0x83) {
-        fprintf(stderr, "  serial write B [%02x] \"%c\"\n", value, value);
+        fprintf(stderr, "  serial write B [%02x] \"%c\"\n", data, data);
         return;
     }
 }
 
-// Z80EX-Callback for an interrupt read
-Z80EX_BYTE int_read(Z80EX_CONTEXT* cpu, void* user_data) {
-    fprintf(stderr, "  interrupt vector!\n");
-    return 0;
-}
-
-// Z80EX-Callback for DASM memory read
 Z80EX_BYTE mem_read_dasm(Z80EX_WORD addr, void *user_data) {
     struct zpox* z = user_data;
     return z->memory[(uint16_t)addr];
@@ -126,7 +114,6 @@ void init_zpox(struct zpox* z) {
         return;
     }
     memset(z->memory, 0, sizeof(uint8_t) * 0x10000);
-    z->cpu = z80ex_create(mem_read, z, mem_write, z, port_read, z, port_write, z, int_read, z);
 }
 
 void print_asm(struct zpox* z, uint16_t pc) {
@@ -140,9 +127,9 @@ void main_program(struct zpox* z) {
     uint16_t pc;
     uint32_t nr_ins = 0;
     while (1) {
-        pc = z80ex_get_reg(z->cpu, regPC);
+        pc = z->cpu->PC;
         print_asm(z, pc);
-        z80ex_step(z->cpu);
+        Z80Execute(z->cpu);
         nr_ins++;
         if (nr_ins > 500) {
             break;
@@ -154,8 +141,8 @@ void main_program(struct zpox* z) {
 int main(int argc, char *argv[]) {
     int8_t c;
     int option_index = 0;
-    struct zpox z;
     struct open_files f;
+    Z80Context cpu;
 
     static struct option long_options[] = {
         {"rom", optional_argument, 0, 'r'},
@@ -165,6 +152,13 @@ int main(int argc, char *argv[]) {
 
     init_zpox(&z);
     z.files = &f;
+
+    cpu.memRead = mem_read;
+    cpu.memWrite = mem_write;
+    cpu.ioRead = port_read;
+    cpu.ioWrite = port_write;
+    z.cpu = &cpu;
+    Z80RESET(&cpu);
 
     while (1) {
         c = getopt_long(argc, argv, "r:c:", long_options, &option_index);

@@ -3,9 +3,14 @@ CFLAGS := -Wall -Werror -ggdb
 
 LDFLAGS = -lpthread
 
-INCLUDE=-Iexternal/z80ex/include/
 zpox: zpox.c external/z80ex/z80ex.o external/z80ex/z80ex_dasm.o console.o
-	$(CC) $(CFLAGS) $(INCLUDE) $(LDFLAGS) -o $@ external/z80ex/z80ex.o external/z80ex/z80ex_dasm.o console.o $<
+	$(CC) $(CFLAGS) -Iexternal/z80ex/include $(LDFLAGS) -o $@ external/z80ex/z80ex.o external/z80ex/z80ex_dasm.o console.o $<
+
+zpox_libz80: zpox_libz80.c z80.o external/z80ex/z80ex_dasm.o
+	$(CC) $(CFLAGS) -Iexternal/libz80 -Iexternal/z80ex/include -o $@ z80.o external/z80ex/z80ex_dasm.o $<
+
+z80.o: external/libz80/z80.c external/libz80/z80.h external/z80ex/z80ex_dasm.o
+	$(CC) $(CFLAGS) -Iexternal/libz80 -c -o $@ $<
 
 external/z80ex/z80ex.o:
 	cd external/z80ex/ && make
