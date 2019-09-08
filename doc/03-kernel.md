@@ -1,30 +1,4 @@
-# Zpox
-
-A POSIX semi-compliant OS for the RC2014 pro. 
-
-The core of Zpox is a collection of POSIX system calls made available to processes, and an interrupt handler for preemptive multi tasking.
-
-## Hardware features
-
-* Lower 32K reserved for OS: 16K ROM 16K RAM
-* IO device for management for switching higher 32K banks in and out
-* SIO/2 serial card for hardware console and serial keyboard (XT/AT)
-* Video card based on a Yamaha V9958 (also generating interrupt)
-
-## OS features
-
-* 16K ROM for interrupt handlers and core OS code
-* 16K RAM for core services and OS tables
-* 32K banked RAM, one per user processes
-* Compact Flash service supporting FAT32
-* Executable loading from a simplified Elf format
-* Some form of threading (multiple processes sharing a single switched bank)
-* TTY subsystem and pipes
-* Semaphores
-
-## Memory management
-
-Since there is no memory management unit and no virtual memory process isolation is achieved via switching banks of RAM in and out. Each process is assigned a bank number that is stored in the process table in OS RAM. Multiple processes could share a single bank behaving as threads. Resource contention can be resolved using a lock.
+# Kernel
 
 ## Interrupts
 
@@ -34,8 +8,10 @@ An interrupt source periodically invokes the main OS interrupt handler. This swi
 
 The process table stores the register states for each process. When an interrupt occurs we need to save the current process state, choose a new process and restore the new process state into registers. Looking up values in the process table requires using registers to calculate offsets. Because of this we can not use the shadow register copy functions because we can not access those values without polluting register values. Instead we block copy the current process registers into a static location not requiring computation, and then copy from there into the process table. We then copy the new process register values into the same static location and from there copy into CPU registers. This way we do not need to perform a computation while register values are being copied in and out of the CPU.
 
+### RST interrupt handler
+
 * Disable interrupts
-* Pop off the return address as we are not going to return (?)
+* Pop off the return address as we are not going to return
 * Copy current process register values to static location
 * Calculate process table location
 * Copy static location values to process table
@@ -45,7 +21,7 @@ The process table stores the register states for each process. When an interrupt
 * Enable interrupts
 * Jump to process PC to resume operation
 
-## Syscalls
+### Syscalls
 
 For some syscalls we know that we are not going to do a context switch while the syscall is being processed, so we disable interrupts and can use the shadow registers to save the current process state.
 
@@ -55,6 +31,8 @@ For some syscalls we know that we are not going to do a context switch while the
 * Shadow register swap
 * Enable interrupts
 * Return
+
+A special type of syscall is one where the process will be put into the bloked state. For example a syscall writing a large mount of data to a socket, and the reader of the socket needs to get some CPU time to process it.
 
 ### Semaphores
 
@@ -86,4 +64,55 @@ Could have some memory addresses that are "blacked out" in between the OS RAM ar
 
 Context switching is pretty expensive and for some syscalls we will need to context switch in some other process. For example the disk service would need to be switched in to process a disk write. However a lock would not need a context switch as there is no service providing locks. We could go with a mono kernel where all the services are compiled into the kernel but that reduces flexibility.
 
+### Two interrupt locations: 0x28 for syscalls and 0x38 for CTC
+
+Threads wishing to make a syscall place the syscall id into the [?] register and do a "RST 28h" instruction.
+
+#### Logical function map of an interrupt
+
+    void hardware_interrupt() {
+        DI();
+        POP(); // remove return address
+        task_switch();
+        EI();
+        goto CURRENT_THREAD_PC;
+    }
+
+    void task_switch() {
+        save_current_thread_registers();
+        task_switch();
+    }
+
+    void save_current_thread_registers() {
+        // Copy registers to scratchpad
+        // Calculate thread table start address
+        // Copy scratchpad to thread table
+    }
+
+    void load_next_process() {
+        find_next_process();
+        // Copy new thread table values into scratchpad
+        // Copy scratchpad values into registers
+    }
+
+    void find_next_process() {
+        // Cycle through thread table from prev thread
+        // If in running state pick it
+        // If blocked on socket read and socket has data wake it up and pick it
+    }
+
+#### Logical function map of a syscall
+
+    void software_interrupt() {
+        DI();
+        EX_AF();
+        EXX();
+        // Get the syscall id from the I register
+        // Lookup the address in the syscall vector table using [?]
+        process_syscall();
+        EXX();
+        EX_AF();
+        EI();
+        RETI();
+    }
 

@@ -1,4 +1,6 @@
 *.o
-external/*
 roms/*
+ext/
+*.pdf
+*.odp
 zpox

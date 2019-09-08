@@ -1,0 +1,6 @@
+# Serial console driver
+
+The serial console driver scans hardware for available physical serial ports. For each one it creates a named socket using a syscall (which appears in the /dev/ directory in the file system). If there are no processes connected to the socket the kernel does not bother creating a buffer. When a user thread wants to connect to the socket it will open the device file using a syscall. This will create a buffer pair connecting the console driver and the process. When a byte is received on the serial device a physical interrupt is triggered which is caught by the kernel. The kernel then triggers a software interrupt in the serial driver. The serial driver reads the byte from the serial device into the buffer associated with the connected user thread. If the serial driver does not have a connected user thread it simply throws away the byte. The user thread is assumed to be blocked on receive and so the kernel will then wake up the thread and let the receive return with the byte.
+
+What happens when the user thread never calls receive (or doesn't call it for a very long time)? The serial driver will continue to receive bytes via interrupts until the buffer is full. At that point it will start throwing bytes away and indicate that this is happening via a flag in the socket structure.
+
