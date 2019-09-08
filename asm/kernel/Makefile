@@ -2,16 +2,15 @@ ASM = z80asm-gnu
 
 SRCS =
 SRCS += 00-variables.asm
-SRCS += 01-interrupt.asm
-SRCS += 02-tidtable.asm
+SRCS += 01-rst00.asm
+SRCS += 02-rst38.asm
+SRCS += 03-tidtable.asm
+SRCS += 04-syscalls.asm
 
 all: kernel.bin
 
-kernel.bin: kernel.asm
+kernel.bin: kernel.asm $(SRCS)
 	$(ASM) -o $@ $<
 
-kernel.asm: $(SRCS)
-	cat $(SRCS) > $@
-
 clean:
-	rm -f kernel.bin kernel.asm
+	rm -f kernel.bin
