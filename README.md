@@ -18,8 +18,7 @@ The core of Zpox is a collection of POSIX system calls made available to process
 * 32K banked RAM, one per user processes
 * Compact Flash service supporting FAT32
 * Executable loading from a simplified Elf format
-* Some form of threading (multiple processes sharing a single switched bank)
-* TTY subsystem and pipes
+* TTY subsystem, pipes, sockets
 * Semaphores
 
 ## Memory management
