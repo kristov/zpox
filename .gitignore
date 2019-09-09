@@ -3,4 +3,5 @@ roms/*
 ext/
 *.pdf
 *.odp
+*.bin
 zpox

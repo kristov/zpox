@@ -4,8 +4,8 @@ SRCS =
 SRCS += 00-variables.asm
 SRCS += 01-rst00.asm
 SRCS += 02-rst38.asm
-SRCS += 03-tidtable.asm
-SRCS += 04-syscalls.asm
+SRCS += 03-bootstrap.asm
+SRCS += 04-tidtable.asm
 
 all: kernel.bin
 
