@@ -16,6 +16,13 @@
 ;   loaded with the base address of the table and then de is added to ix to
 ;   give the final result.
 ;
+; Registers used:
+;
+;   b:  the current tid
+;   hl: multiplication of tid
+;   de: transfer hl to ix
+;   ix: address of tid entry in memory
+;
 k_tid_addr_of:
     ld ix, k_tid_tab_base   ; put base address in ix
     ld h, 0x00              ; zero h ("xor h" didnt seem to work)
@@ -55,6 +62,15 @@ k_tid_addr_of:
 ;   we get to the top it will cycle back to the beginning of the table. Because
 ;   b is controlling the loop we will stop before getting back to the current
 ;   tid.
+;
+; Registers used:
+;
+;   a:  misc
+;   b:  loop variable for the thread table
+;   c:  The return tid
+;   h:  number of entries from current tid until end of table
+;   de: size of a block
+;   ix: address of tid entry in memory
 ;
 k_tid_next_free:
     ld c, b                 ; save the current tid into c
