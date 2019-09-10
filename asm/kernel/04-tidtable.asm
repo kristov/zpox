@@ -110,8 +110,7 @@ k_tid_found:
 ;
 k_tid_next_free:
     ld c, 0x00              ; looking for status zero meaning free
-    call k_tid_find_status  ; use status search routine
-    ret
+    jp k_tid_find_status    ; use status search routine
 
 ; k_tid_next_run(): Find the next runnable thread
 ;
@@ -125,6 +124,5 @@ k_tid_next_free:
 ;
 k_tid_next_run:
     ld c, 0x01              ; look for running status
-    call k_tid_find_status  ; use status search routine
-    ret
+    jp k_tid_find_status    ; use status search routine
 
