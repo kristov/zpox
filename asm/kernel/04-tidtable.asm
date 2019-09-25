@@ -1,39 +1,31 @@
-; k_tid_addr_of(): Find the address of a tid in the thread table
+; k_tid_addr_of(): Find the address of a tid in the thread status table
 ;
 ; Purpose:
-;   The tid specifies an index into the thread table. The purpose of this
-;   function is to take a tid and turn it into an address.
+;   The tid specifies an index into the thread status table. The purpose of
+;   this function is to take a tid and turn it into an address.
 ;
 ; Usage:
 ;   1) call "k_tid_addr_of"
-;   2) the address is in ix
+;   2) the address is in de
 ;
 ; Explanation:
-;   Only bc and de can be added to ix. However neither of them can be added to
-;   each other (bit shifted left). So first hl is used to calculate the byte
-;   offset from k_tid_tab_base for this tid. Then hl is copied to de, ix is
-;   loaded with the base address of the table and then de is added to ix to
-;   give the final result.
+;   The value at (k_tid_curr) holds the current thread id. This is added to
+;   k_tid_tab_base to find the address of the status byte in the thread status
+;   table.
 ;
 ; Registers used:
 ;
 ;   a:  the current tid
-;   hl: multiplication of tid
-;   de: transfer hl to ix
-;   ix: address of tid entry in memory
+;   hl: temporary for addition
+;   de: address of tid entry in memory
 ;
 k_tid_addr_of:
-    ld ix, k_tid_tab_base   ; put base address in ix
-    ld h, 0x00              ; zero h ("xor h" didnt seem to work)
+    ld hl, k_tid_tab_base   ; put base address in hl
+    ld d, 0x00              ; zero d ("xor d" didnt seem to work)
     ld a, (k_tid_curr)      ; load current tid into a
-    ld l, a                 ; move it to l
-    add hl, hl              ; x2
-    add hl, hl              ; x4
-    add hl, hl              ; x8
-    add hl, hl              ; x16
-    ex de, hl               ; de does not have "add de, de"
-    add ix, de              ; add de to ix
-    ex de, hl               ; swap back as de might have useful things
+    ld e, a                 ; copy it to e
+    add hl, de              ; add de to hl
+    ex de, hl               ; put value into de and free up hl
     ret
 
 ; k_tid_find_status(): Find the next tid entry after tid with a given status
@@ -53,7 +45,7 @@ k_tid_addr_of:
 ;   4) if l == 0 then no thread of that status was found (tid 0 is reserved)
 ;
 ; Explanation:
-;   First k_tid_addr_of() is called to set ix to the address of the thread table
+;   First k_tid_addr_of() is called to set hl to the address of the thread table
 ;   entry. Then de is reset to the entry size. Then a loop of k_tid_max is
 ;   started to scan all possible table entries. Each loop adds de to ix to move
 ;   to the next entry. Unless tid is zero this loop would extend beyond the
@@ -70,30 +62,27 @@ k_tid_addr_of:
 ;   b:  loop variable for the thread table
 ;   l:  The return tid
 ;   h:  number of entries from current tid until end of table
-;   de: size of a block
-;   ix: address of tid entry in memory
+;   de: address of tid entry in memory
 ;
 k_tid_find_status:
     call k_tid_addr_of      ; calculate the address of the current tid in the table
-    ld a, (k_tid_curr)      ; load current tid into a
-    ld l, a                 ; move it to l
+    ld l, a                 ; copy current tid to l
     ld a, k_tid_max         ; calculate the diff betwen tid and the max table entry
     sub l                   ; a now contains k_tid_max - tid (nr of loops before resetting k_tid_tab_base)
     ld h, a                 ; free up a, h becomes loops until a reset of ix needed
     ld b, k_tid_max         ; prepare to loop around k_tid_max times
-    ld de, k_tid_tab_len    ; set de to size of block
-k_tid_next_block:
-    add ix, de              ; shift ix to next block (de is k_tid_tab_len)
+k_tid_next_id:
+    inc de                  ; shift de to next item
     inc l                   ; increment the new tid stored in l
     dec h                   ; decrement h
     jp nz, k_tid_no_reset   ; if h is not zero skip resetting ix
-    ld ix, k_tid_tab_base   ; cycle ix back to beginning of table
+    ld de, k_tid_tab_base   ; cycle ix back to beginning of table
     ld l, 0x00              ; cycle new tid back around
 k_tid_no_reset:
-    ld a, (ix+0)            ; load status byte into a
+    ld a, (de)              ; load status byte into a
     sub c                   ; subtract the wanted status
     jp z, k_tid_found       ; if zero we found an entry
-    djnz k_tid_next_block
+    djnz k_tid_next_id      ; keep looking b number of times
     ld l, 0x00              ; not found
 k_tid_found:
     ret
@@ -109,7 +98,7 @@ k_tid_found:
 ;   3) if c == 0 then no runnable threads were found (tid 0 is reserved)
 ;
 k_tid_next_free:
-    ld c, 0x00              ; looking for status zero meaning free
+    ld c, k_t_unused        ; looking for status zero meaning free
     jp k_tid_find_status    ; use status search routine
 
 ; k_tid_next_run(): Find the next runnable thread
@@ -123,6 +112,6 @@ k_tid_next_free:
 ;   3) if c == 0 then no runnable threads were found (tid 0 is reserved)
 ;
 k_tid_next_run:
-    ld c, 0x01              ; look for running status
+    ld c, k_t_running       ; look for running status
     jp k_tid_find_status    ; use status search routine
 
