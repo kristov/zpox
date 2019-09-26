@@ -1,4 +1,4 @@
-include '../../00-variables.asm'
+include 'variables.asm'
 
 main:
     ld a, 0x00              ; prepare to load 0 at location

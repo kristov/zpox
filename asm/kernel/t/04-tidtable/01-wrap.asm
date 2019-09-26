@@ -1,7 +1,7 @@
 ; Find an entry in a table where the next free entry is before the current tid
 ; (wrapping).
 ;
-include '../../00-variables.asm'
+include 'variables.asm'
 
 main:
     ld a, k_t_running       ; set a to running state value

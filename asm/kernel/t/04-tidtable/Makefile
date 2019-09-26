@@ -1,5 +1,5 @@
 ASM = z80asm-gnu
-Z8T_LOC=/home/ceade/src/personal/github/z8t
+Z8T=/home/ceade/src/personal/github/z8t/z8t
 
 TESTS =
 TESTS += 00-emptytable.bin
@@ -10,6 +10,11 @@ all: $(TESTS)
 
 %.bin: %.asm
 	$(ASM) -o $@ $<
+
+tests: $(TESTS)
+	$(Z8T) -r 00-emptytable.bin -t 00-emptytable.tspec
+	$(Z8T) -r 01-wrap.bin -t 01-wrap.tspec
+	$(Z8T) -r 02-last.bin -t 02-last.tspec
 
 clean:
 	rm -f $(TESTS)
