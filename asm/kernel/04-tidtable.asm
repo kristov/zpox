@@ -5,8 +5,9 @@
 ;   this function is to take a tid and turn it into an address.
 ;
 ; Usage:
-;   1) call "k_tid_addr_of"
-;   2) the address is in de
+;   1) put the desired tid into a
+;   2) call "k_tid_addr_of"
+;   3) the address is in de
 ;
 ; Explanation:
 ;   The value at (k_tid_curr) holds the current thread id. This is added to
@@ -21,8 +22,7 @@
 ;
 k_tid_addr_of:
     ld hl, k_tid_tab_base   ; put base address in hl
-    ld d, 0x00              ; zero d ("xor d" didnt seem to work)
-    ld a, (k_tid_curr)      ; load current tid into a
+    ld d, 0x00              ; zero d
     ld e, a                 ; copy it to e
     add hl, de              ; add de to hl
     ex de, hl               ; put value into de and free up hl
@@ -41,7 +41,7 @@ k_tid_addr_of:
 ; Usage:
 ;   1) put the desired status into c
 ;   2) call "k_tid_find_status"
-;   3) if l != 0 then ix == address of tid and l == the new tid
+;   3) if l != 0 then de == address of tid and l == the new tid
 ;   4) if l == 0 then no thread of that status was found (tid 0 is reserved)
 ;
 ; Explanation:
@@ -65,6 +65,7 @@ k_tid_addr_of:
 ;   de: address of tid entry in memory
 ;
 k_tid_find_status:
+    ld a, (k_tid_curr)      ; load current tid into a
     call k_tid_addr_of      ; calculate the address of the current tid in the table
     ld l, a                 ; copy current tid to l
     ld a, k_tid_max         ; calculate the diff betwen tid and the max table entry
@@ -115,3 +116,18 @@ k_tid_next_run:
     ld c, k_t_running       ; look for running status
     jp k_tid_find_status    ; use status search routine
 
+; k_tid_set_status(): Set the status of a given tid
+;
+; Purpose:
+;   Set the status of a given tid in the thread status table.
+;
+; Usage:
+;   1) put the desired tid into a
+;   2) put the desired status into c
+;   3) call "k_tid_set_status"
+;
+k_tid_set_status:
+    call k_tid_addr_of      ; calculate the address of the current tid in the table
+    ld a, c                 ; put the desired status into a
+    ld (de), a              ; set the status
+    ret
