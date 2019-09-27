@@ -15,7 +15,7 @@ k_tid_curr: equ 0x0104      ; the running thread id
 ; memory and the maximum number of entries.
 ;
 k_tid_tab_len: equ 0x10     ; size of a process table entry (16)
-k_tid_tab_base: equ 0x0105  ; location of table
+k_tids_tab_base: equ 0x0105 ; location of thread status table
 k_tid_max: equ 0x04         ; maximum number entries in tid table
 
 ; There is space for 8 kernel threads in the lower 32Kb of memory. Each is

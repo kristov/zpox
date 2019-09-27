@@ -44,7 +44,9 @@ k_proc_hardint:
 ;   Find the next runnable thread (if applicable) and switch to it.
 ;
 k_task_switch:
-    ld a, (k_tid_curr)      ; load the running tid into a
-    ld b, a                 ; copy it to b
     call k_tid_next_run     ; find the next runnable tid (in c)
-
+    ld a, (k_tid_curr)      ; load the running tid into a
+    sub c                   ; test if its the same tid
+    ret z                   ; return if we would be switching to the same tid
+    ; pop and copy all registers to tid register table
+    ; copy and push all registers from new tid

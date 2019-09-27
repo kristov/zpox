@@ -2,7 +2,7 @@ include 'variables.asm'
 
 main:
     ld a, k_t_running       ; set a to running state value
-    ld de, k_tid_tab_base   ; set de to location of table
+    ld de, k_tids_tab_base  ; set de to location of table
     ld (de), a              ; set status byte to in-use
     inc de                  ; go to next entry
     ld (de), a              ; set status byte to in-use

@@ -11,7 +11,7 @@
 ;
 ; Explanation:
 ;   The value at (k_tid_curr) holds the current thread id. This is added to
-;   k_tid_tab_base to find the address of the status byte in the thread status
+;   k_tids_tab_base to find the address of the status byte in the thread status
 ;   table.
 ;
 ; Registers used:
@@ -21,7 +21,7 @@
 ;   de: address of tid entry in memory
 ;
 k_tid_addr_of:
-    ld hl, k_tid_tab_base   ; put base address in hl
+    ld hl, k_tids_tab_base  ; put base address in hl
     ld d, 0x00              ; zero d
     ld e, a                 ; copy it to e
     add hl, de              ; add de to hl
@@ -69,7 +69,7 @@ k_tid_find_status:
     call k_tid_addr_of      ; calculate the address of the current tid in the table
     ld l, a                 ; copy current tid to l
     ld a, k_tid_max         ; calculate the diff betwen tid and the max table entry
-    sub l                   ; a now contains k_tid_max - tid (nr of loops before resetting k_tid_tab_base)
+    sub l                   ; a now contains k_tid_max - tid (nr of loops before resetting k_tids_tab_base)
     ld h, a                 ; free up a, h becomes loops until a reset of ix needed
     ld b, k_tid_max         ; prepare to loop around k_tid_max times
 k_tid_next_id:
@@ -77,7 +77,7 @@ k_tid_next_id:
     inc l                   ; increment the new tid stored in l
     dec h                   ; decrement h
     jp nz, k_tid_no_reset   ; if h is not zero skip resetting ix
-    ld de, k_tid_tab_base   ; cycle ix back to beginning of table
+    ld de, k_tids_tab_base  ; cycle ix back to beginning of table
     ld l, 0x00              ; cycle new tid back around
 k_tid_no_reset:
     ld a, (de)              ; load status byte into a
@@ -128,6 +128,9 @@ k_tid_next_run:
 ;
 k_tid_set_status:
     call k_tid_addr_of      ; calculate the address of the current tid in the table
-    ld a, c                 ; put the desired status into a
-    ld (de), a              ; set the status
+    ld a, (de)              ; load the current status into a
+    and 11111000b           ; zero out the lower 3 bits of current status
+    or c                    ; apply the lower 3 bits to a
+    ld (de), a              ; save the status back
     ret
+
