@@ -17,19 +17,19 @@ k_rst08:
     di                      ; disable interrupts
     ld (k_sp_tid), sp       ; save the current thread sp
     ld sp, (k_sp_kernel)    ; load the kernel sp
-    push af                 ; save all registers on the kernel stack
-    push bc
-    push de
-    push hl
+    push iy                 ; save all registers on the kernel stack
     push ix
-    push iy
+    push hl
+    push de
+    push bc
+    push af
     call k_proc_syscall     ; process the syscall
-    pop iy                  ; restore registers from kernel stack
-    pop ix
-    pop hl
-    pop de
+    pop af                  ; restore registers from kernel stack
     pop bc
-    pop af
+    pop de
+    pop hl
+    pop ix
+    pop iy
     ld (k_sp_kernel), sp    ; save the kernel sp
     ld sp, (k_sp_tid)       ; load the current thread sp
     ei                      ; enable interrupts
