@@ -1,4 +1,4 @@
-; k_tid_addr_of(): Find the address of a tid in the thread status table
+; k_tids_addr_of(): Find the address of a tid in the thread status table
 ;
 ; Purpose:
 ;   The tid specifies an index into the thread status table. The purpose of
@@ -6,7 +6,7 @@
 ;
 ; Usage:
 ;   1) put the desired tid into a
-;   2) call "k_tid_addr_of"
+;   2) call "k_tids_addr_of"
 ;   3) the address is in de
 ;
 ; Explanation:
@@ -20,7 +20,7 @@
 ;   hl: temporary for addition
 ;   de: address of tid entry in memory
 ;
-k_tid_addr_of:
+k_tids_addr_of:
     ld hl, k_tids_tab_base  ; put base address in hl
     ld d, 0x00              ; zero d
     ld e, a                 ; copy it to e
@@ -45,7 +45,7 @@ k_tid_addr_of:
 ;   4) if l == 0 then no thread of that status was found (tid 0 is reserved)
 ;
 ; Explanation:
-;   First k_tid_addr_of() is called to set hl to the address of the thread table
+;   First k_tids_addr_of() is called to set hl to the address of the thread table
 ;   entry. Then de is reset to the entry size. Then a loop of k_tid_max is
 ;   started to scan all possible table entries. Each loop adds de to ix to move
 ;   to the next entry. Unless tid is zero this loop would extend beyond the
@@ -66,7 +66,7 @@ k_tid_addr_of:
 ;
 k_tid_find_status:
     ld a, (k_tid_curr)      ; load current tid into a
-    call k_tid_addr_of      ; calculate the address of the current tid in the table
+    call k_tids_addr_of     ; calculate the address of the current tid in the table
     ld l, a                 ; copy current tid to l
     ld a, k_tid_max         ; calculate the diff betwen tid and the max table entry
     sub l                   ; a now contains k_tid_max - tid (nr of loops before resetting k_tids_tab_base)
@@ -127,7 +127,7 @@ k_tid_next_run:
 ;   3) call "k_tid_set_status"
 ;
 k_tid_set_status:
-    call k_tid_addr_of      ; calculate the address of the current tid in the table
+    call k_tids_addr_of     ; calculate the address of the current tid in the table
     ld a, (de)              ; load the current status into a
     and 11111000b           ; zero out the lower 3 bits of current status
     or c                    ; apply the lower 3 bits to a
