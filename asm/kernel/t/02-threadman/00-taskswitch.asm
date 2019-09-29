@@ -1,5 +1,22 @@
 include 'variables.asm'
 
+; The test goes as follows:
+;
+;   * the current running thread is tid 1
+;   * tid 2 is not runnable, tid 3 is the next thread that should run
+;   * tid 1 table entry is filled with ff's (they should get overwritten)
+;   * tid 3 table entry is filled with 0xb[1-6] and fake sp (0x3030)
+;   * tid 1 sp variable is set to 0x2020
+;   * fake 0xa[1-6] values are pushed onto the stack, simulating interrupt
+;   * call task switch routine
+;
+; The result should be:
+;
+;   * the ff's in tid 1 table are overridden with 0xa[1-6] and 0x2020
+;   * tid 3 is selected as the next runnable thread
+;   * tid 3 table values replace 0xa[1-6] on the stack
+;   * the k_sp_tid variable is set to 0x3030
+;
 main:
     ld sp, 0x01a4           ; set the stack top
     ld (k_sp_kernel), sp    ; set the kernel stack variable
