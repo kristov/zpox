@@ -1,3 +1,37 @@
+; k_tid_addr_of(): Find the address of a tid in the thread table
+;
+; Purpose:
+;   The tid specifies an index into the thread table. The purpose of this
+;   function is to take a tid and turn it into an address.
+;
+; Usage:
+;   1) put the desired tid into a
+;   2) call "k_tid_addr_of"
+;   3) the address is in de
+;
+; Explanation:
+;   The value a is the thread index id. This is loaded into hl and then
+;   multiplied by 16 to calculate the table offset. This is then added to the
+;   table base address.
+;
+; Registers used:
+;
+;   a:  the current tid
+;   hl: temporary for multiplication
+;   de: address of tid entry in memory
+;
+k_tid_addr_of:
+    ld de, k_tid_tab_base   ; put base address in de
+    ld h, 0x00              ; zero h
+    ld l, a                 ; copy current tid to l
+    add hl, hl              ; x2
+    add hl, hl              ; x4
+    add hl, hl              ; x8
+    add hl, hl              ; x16
+    add hl, de              ; base address to calculated offset
+    ex de, hl               ; exchange so de has the address
+    ret
+
 ; k_tids_addr_of(): Find the address of a tid in the thread status table
 ;
 ; Purpose:

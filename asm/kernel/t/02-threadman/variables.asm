@@ -1,0 +1,9 @@
+k_sp_kernel: equ 0x0132
+k_sp_tid: equ 0x0134
+k_tid_curr: equ 0x0136
+k_tid_next: equ 0x0137
+k_tids_tab_base: equ 0x0138
+k_tid_tab_base: equ 0x0144
+k_tid_max: equ 0x04
+k_t_unused: equ 0x00
+k_t_running: equ 0x01

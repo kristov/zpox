@@ -14,12 +14,14 @@
 ;   |--------+--------------------------------------|
 ;   | 0x0404 | Running thread id                    |
 ;   |--------+--------------------------------------|
-;   | 0x0405 | Thread 0 status (status table start) |
-;   | 0x0406 | Thread 1 status                      |
-;   | ...    | Thread [X] status                    |
-;   | 0x0414 | Thread 15 status (status table end)  |
+;   | 0x0405 | Next running thread id               |
 ;   |--------+--------------------------------------|
-;   | 0x0415 |                                      |
+;   | 0x0406 | Thread 0 status (status table start) |
+;   | 0x0407 | Thread 1 status                      |
+;   | ...    | Thread [X] status                    |
+;   | 0x0415 | Thread 15 status (status table end)  |
+;   |--------+--------------------------------------|
+;   | 0x0416 |                                      |
 
 
 ; Kernel variables and constants
@@ -27,12 +29,13 @@
 k_sp_kernel: equ 0x0400     ; stores stack pointer of the kernel
 k_sp_tid: equ 0x0402        ; stores stack pointer of the current thread
 k_tid_curr: equ 0x0404      ; the running thread id
+k_tid_next: equ 0x0405      ; the running thread id
 k_tid_max: equ 0x10         ; maximum number of threads
 
 ; Variables for the thread status table. This is an array of k_tid_max bytes
 ; where each byte encodes the thread status and any pending signals.
 ;
-k_tids_tab_base: equ 0x0405 ; location of thread status table
+k_tids_tab_base: equ 0x0406 ; location of thread status table
 k_t_unused: equ 0x00        ; the thread entry is free
 k_t_running: equ 0x01       ; the thread is running
 k_t_blocked: equ 0x02       ; the thread is blocked
@@ -50,6 +53,6 @@ k_sigttou: equ 0x09         ; block
 ; Variables for the thread table. This is an array of structs, where each
 ; stores the process state (registers, stack pointer).
 ;
-k_tid_tab_base: equ 0x415   ; location of thread table
+k_tid_tab_base: equ 0x416   ; location of thread table
 k_tid_tab_len: equ 0x10     ; size of a process table entry (16)
 
