@@ -3,6 +3,21 @@
 ; Purpose:
 ;   Find the next runnable thread (if applicable) and switch to it.
 ;
+; Usage:
+;   1) put the desired tid into a
+;   2) call "k_tids_addr_of"
+;   3) the address is in de
+;
+; Explanation:
+;   This routine is called from the CTC interrupt (rst38). That interrupt
+;   pushes the currently running register values onto the kernel stack. So when
+;   this routine is called it is either going to leave the stack unmodified
+;   because there is no thread switch possible, or it will copy the contents of
+;   the stack into the main thread table for backup and then copy another
+;   threads values overwriting the stack. When the routine returns to the
+;   interrupt it pops whatever was on the stack back into registers and resumes
+;   operation.
+;
 k_task_switch:
     call k_tid_next_run     ; find the next runnable tid (in l)
     ld a, 0x00              ; prepare to test if l is zero
