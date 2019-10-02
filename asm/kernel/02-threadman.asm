@@ -1,4 +1,4 @@
-; k_task_switch(): Calculate the next thread to run
+; k_proc_switch(): Calculate the next thread to run
 ;
 ; Purpose:
 ;   Find the next runnable thread (if applicable) and switch to it.
@@ -18,7 +18,7 @@
 ;   interrupt it pops whatever was on the stack back into registers and resumes
 ;   operation.
 ;
-k_task_switch:
+k_proc_switch:
     call k_tid_next_run     ; find the next runnable tid (in l)
     ld a, 0x00              ; prepare to test if l is zero
     sub l                   ; subtract l from 0

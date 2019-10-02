@@ -4,7 +4,6 @@ SRCS =
 SRCS += 00-variables.asm
 SRCS += 01-interrupts.asm
 SRCS += 02-threadman.asm
-SRCS += 03-bootstrap.asm
 SRCS += 04-tidtable.asm
 
 all: rom.bin
